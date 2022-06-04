@@ -185,20 +185,20 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
       });
 
       var prev = {};
+      var googlePrev = {};
       var getStats = function() {
-        if (isFirefox || isSafari) {
-          pc.getStats(null).then(function(res) {
-            var now = map2obj(res);
-            var base = JSON.parse(JSON.stringify(now)); // our new prev
-            trace('getstats', id, deltaCompression(prev, now));
-            prev = base;
-          });
-        } else {
+        pc.getStats(null).then(function(res) {
+          var now = map2obj(res);
+          var base = JSON.parse(JSON.stringify(now)); // our new prev
+          trace('getstats', id, deltaCompression(prev, now));
+          prev = base;
+        });
+        if (!isFirefox && !isSafari) {
           pc.getStats(function(res) {
             var now = mangleChromeStats(pc, res);
             var base = JSON.parse(JSON.stringify(now)); // our new prev
-            trace('getstats', id, deltaCompression(prev, now));
-            prev = base;
+            trace('getstatsGoogle', id, deltaCompression(googlePrev, now));
+            googlePrev = base;
           });
         }
       };
