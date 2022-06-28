@@ -15,58 +15,56 @@ function map2obj(m) {
 
 // apply a delta compression to the stats report. Reduces size by ~90%.
 // To reduce further, report keys could be compressed.
-function deltaCompression(oldStats, newStats) {
-  newStats = JSON.parse(JSON.stringify(newStats));
-  Object.keys(newStats).forEach(function(id) {
-    var report = newStats[id];
+function deltaCompression(oldReportList, newReportList) {
+  newReportList = JSON.parse(JSON.stringify(newReportList));
+
+  // Determine timestamp for the report list
+  const timestamp = Math.max.apply(null, Object.values(newReportList).map(it => it.timestamp));
+
+  // Insert tombstones for vanished reports
+  Object.keys(oldReportList).forEach(function(subjectId) {
+    if (!newReportList[subjectId]) {
+      newReportList[subjectId] = {
+        tombstone: "tombstone"
+      };
+    }
+  });
+
+  // Remove unchanged statistics
+  Object.keys(newReportList).forEach(function(subjectId) {
+    var report = newReportList[subjectId];
     delete report.id;
-    if (!oldStats[id]) {
+
+    // Report is new, don't delete anything.
+    if (!oldReportList[subjectId]) {
       return;
     }
-    Object.keys(report).forEach(function(name) {
-      if (report[name] === oldStats[id][name]) {
-        delete newStats[id][name];
+
+    Object.keys(report).forEach(function(statisticName) {
+      if (statisticName === "timestamp") {
+        return;
       }
-      if (Object.keys(report).length === 0) {
-        delete newStats[id];
-      } else if (Object.keys(report).length === 1 && report.timestamp) {
-        delete newStats[id];
+      // Statistic is unchanged => delete
+      if (report[statisticName] === oldReportList[subjectId][statisticName]) {
+        delete newReportList[subjectId][statisticName];
       }
     });
-  });
 
-  var timestamp = -Infinity;
-  Object.keys(newStats).forEach(function(id) {
-    var report = newStats[id];
-    if (report.timestamp > timestamp) {
-      timestamp = report.timestamp;
+    // Delete timestamps equal to global report list timestamp
+    if (report.timestamp === timestamp && oldReportList[subjectId]["timestamp"]) {
+      delete report.timestamp;
+    }
+
+    // Delete empty report changes
+    if (Object.keys(report).length === 0) {
+        // Report has become empty => delete entire report
+        delete newReportList[subjectId];
     }
   });
-  Object.keys(newStats).forEach(function(id) {
-    var report = newStats[id];
-    if (report.timestamp === timestamp) {
-      report.timestamp = 0;
-    }
-  });
-  newStats.timestamp = timestamp;
-  return newStats;
-}
 
-function mangleChromeStats(pc, response) {
-  var standardReport = {};
-  var reports = response.result();
-  reports.forEach(function(report) {
-    var standardStats = {
-      id: report.id,
-      timestamp: report.timestamp.getTime(),
-      type: report.type,
-    };
-    report.names().forEach(function(name) {
-      standardStats[name] = report.stat(name);
-    });
-    standardReport[standardStats.id] = standardStats;
-  });
-  return standardReport;
+  // Set global report list timestamp
+  newReportList.timestamp = timestamp;
+  return newReportList;
 }
 
 function dumpStream(stream) {
