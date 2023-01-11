@@ -50,3 +50,5 @@ declare module "rtcstats" {
 
     export default function anonymous(trace: (method: string, id: string, data: RTCStatsDataType) => void, getStatsIntervalmsec: number, prefixesToWrap: string[]): void;
 }
+
+declare module 'rtcstats/trace-ws';
