@@ -122,6 +122,10 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
     var origPeerConnection = window[prefix + 'RTCPeerConnection'];
     var peerconnection = function(config, constraints) {
       var pc = new origPeerConnection(config, constraints);
+      if ("__rtcStatsId" in pc) {
+        console.warn("rtcstats: double wrapping of RTCPeerConnection constructor detected");
+        return pc;
+      }
       var id = 'PC_' + peerconnectioncounter++;
       pc.__rtcStatsId = id;
 
