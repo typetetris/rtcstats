@@ -108,6 +108,16 @@ function removeTimestamps(results) {
 */
 
 module.exports = function(trace, getStatsInterval, prefixesToWrap) {
+  const rtcStatsInitScriptInvocation = Math.floor(Math.random() * 100000);
+  if (!!window['__1234_RTC_STATS_WRAPPING']) {
+    var err = new Error();
+    console.warn("rtcstats: already wrapped!", err.stack);
+    return;
+  } else {
+    var err = new Error();
+    console.warn("rtcstats: first time wrapping", err.stack);
+    window['__1234_RTC_STATS_WRAPPING'] = rtcStatsInitScriptInvocation;
+  }
   var peerconnectioncounter = 0;
   var isFirefox = !!window.mozRTCPeerConnection;
   var isEdge = !!window.RTCIceGatherer;
@@ -122,12 +132,19 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
     var origPeerConnection = window[prefix + 'RTCPeerConnection'];
     var peerconnection = function(config, constraints) {
       var pc = new origPeerConnection(config, constraints);
-      if ("__rtcStatsId" in pc) {
-        console.warn("rtcstats: double wrapping of RTCPeerConnection constructor detected");
+      if (!!pc.__rtcStatsId) {
+        console.warn("rtcstats: double wrapping of RTCPeerConnection constructor detected.");
         return pc;
+      }  else {
+        console.warn("rtcstats: first time creating a new RTCPeerConnection and wrapping it.");
       }
       var id = 'PC_' + peerconnectioncounter++;
       pc.__rtcStatsId = id;
+
+      {
+        var err = new Error();
+        console.error("Wrapped RTCPeerConnection Constructor", id, err.stack);
+      }
 
       if (!config) {
         config = { nullConfig: true };
@@ -267,6 +284,8 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
     });
 
     ['createOffer', 'createAnswer'].forEach(function(method) {
+      const createOfferWrapping = Math.floor(Math.random() * 100000);
+      console.log(`Wrapping createOffer: ${createOfferWrapping}`);
       var nativeMethod = origPeerConnection.prototype[method];
       if (nativeMethod) {
         origPeerConnection.prototype[method] = function() {
@@ -279,6 +298,10 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
             opts = arguments[2];
           }
           trace(method, this.__rtcStatsId, opts);
+      {
+        var err = new Error();
+        console.error(rtcStatsId, `Wrapped ${rtcStatsInitScriptInvocation} ${createOfferWrapping} RTCPeerConnection ${method}`, err.stack);
+      }
           return nativeMethod.apply(this, opts ? [opts] : undefined)
           .then(function(description) {
             trace(method + 'OnSuccess', rtcStatsId, description);
