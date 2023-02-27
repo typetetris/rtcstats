@@ -19,7 +19,7 @@ function deltaCompression(oldReportList, newReportList) {
   newReportList = JSON.parse(JSON.stringify(newReportList));
 
   // Determine timestamp for the report list
-  const timestamp = Math.max.apply(null, Object.values(newReportList).map(it => it.timestamp));
+  const timestamp = Math.max.apply(null, Object.values(newReportList).map(function (it) { return it.timestamp;}));
 
   // Insert tombstones for vanished reports
   Object.keys(oldReportList).forEach(function(subjectId) {
