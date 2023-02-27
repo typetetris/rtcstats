@@ -304,7 +304,7 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
             track = dumpTrack(trackOrKind);
           }
           var transceiverInit;
-          if (argumemts.length === 2) {
+          if (arguments.length === 2) {
             transceiverInit = dumpTransceiverInit(arguments[1]);
           }
 
