@@ -67,19 +67,31 @@ function deltaCompression(oldReportList, newReportList) {
   return newReportList;
 }
 
+function dumpTrack(track) {
+  return {
+    id: track.id,                 // unique identifier (GUID) for the track
+    kind: track.kind,             // `audio` or `video`
+    label: track.label,           // identified the track source
+    enabled: track.enabled,       // application can control it
+    muted: track.muted,           // application cannot control it (read-only)
+    readyState: track.readyState, // `live` or `ended`
+  }
+}
+
 function dumpStream(stream) {
   return {
     id: stream.id,
     tracks: stream.getTracks().map(function(track) {
-      return {
-        id: track.id,                 // unique identifier (GUID) for the track
-        kind: track.kind,             // `audio` or `video`
-        label: track.label,           // identified the track source
-        enabled: track.enabled,       // application can control it
-        muted: track.muted,           // application cannot control it (read-only)
-        readyState: track.readyState, // `live` or `ended`
-      };
+      return dumpTrack(track);
     }),
+  };
+}
+
+function dumpTransceiverInit(transceiverInit) {
+  return {
+    direction: transceiverInit.direction,
+    streams: transceiverInit.streams.map(function (stream) { return dumpStream(stream); }),
+    sendEncodings: transceiverInit.sendEncodings
   };
 }
 
@@ -191,6 +203,21 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
           prev = base;
         });
       };
+      var getSendersInfos = function() {
+        var sendersInfos = pc.getSenders().map(function (sender) {
+          var track;
+          if (sender.track) {
+            track = dumpTrack(sender.track);
+          }
+          return {
+            track: track,
+            videoCapabilities: sender.getCapabilities('video'),
+            audioCapabilities: sender.getCapabilities('audio'),
+            parameters: sender.getParameters()
+          };
+        });
+        trace('sendersInfos', id, sendersInfos);
+      };
 
       // TODO: do we want one big interval and all peerconnections
       //    queried in that or one setInterval per PC?
@@ -204,6 +231,18 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
           getStats();
         }, getStatsInterval);
       }
+
+      // TODO: make interval configurable
+      if (!isEdge) {
+        var interval = window.setInterval(function () {
+          if (pc.signalingState === 'closed') {
+            window.clearInterval(interval);
+            return;
+          }
+          getSendersInfos();
+        }, 30 * 1000);
+      }
+
       if (!isEdge) {
         pc.addEventListener('connectionstatechange', function() {
           if (pc.connectionState === 'connected' || pc.connectionState === 'failed') {
@@ -211,6 +250,7 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
           }
         });
       }
+
       return pc;
     };
 
@@ -246,6 +286,30 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
           var track = arguments[0];
           var streams = [].slice.call(arguments, 1);
           trace(method, this.__rtcStatsId, track.kind + ':' + track.id + ' ' + (streams.map(function(s) { return 'stream:' + s.id; }).join(';') || '-'));
+          return nativeMethod.apply(this, arguments);
+        };
+      }
+    });
+
+    ['addTransceiver'].forEach(function(method) {
+      var nativeMethod = origPeerConnection.prototype[method];
+      if (nativeMethod) {
+        origPeerConnection.prototype[method] = function() {
+          var trackOrKind = arguments[0];
+          var track;
+          var kind;
+          if (typeof trackOrKind === 'string') {
+            kind = trackOrKind;
+          } else {
+            track = dumpTrack(trackOrKind);
+          }
+          var transceiverInit;
+          if (argumemts.length === 2) {
+            transceiverInit = dumpTransceiverInit(arguments[1]);
+          }
+
+          trace(method, this.__rtcStatsId, { kind: kind, track: track, transceiverInit: transceiverInit });
+
           return nativeMethod.apply(this, arguments);
         };
       }
