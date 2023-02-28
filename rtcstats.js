@@ -225,7 +225,6 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
         var getStatsIntervalObject = window.setInterval(function() {
           if (pc.signalingState === 'closed') {
             window.clearInterval(getStatsIntervalObject);
-            trace('clearedIntervalGetStats', id, null);
             return;
           }
           getStats();
@@ -237,7 +236,6 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
         var sendersInfosIntervalObject = window.setInterval(function () {
           if (pc.signalingState === 'closed') {
             window.clearInterval(sendersInfosIntervalObject);
-            trace('clearedIntervalSendersInfos', id, null);
             return;
           }
           getSendersInfos();
