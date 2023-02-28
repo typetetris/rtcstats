@@ -88,11 +88,17 @@ function dumpStream(stream) {
 }
 
 function dumpTransceiverInit(transceiverInit) {
-  return {
-    direction: transceiverInit.direction,
-    streams: transceiverInit.streams.map(function (stream) { return dumpStream(stream); }),
-    sendEncodings: transceiverInit.sendEncodings
-  };
+  if (transceiverInit === null) {
+    return null;
+  } else if (typeof transceiverInit === 'object') {
+    return {
+      direction: transceiverInit.direction,
+      streams: transceiverInit.streams?.map(function (stream) { return dumpStream(stream); }),
+      sendEncodings: transceiverInit.sendEncodings
+    };
+  } else {
+    return 'unknown/type error';
+  }
 }
 
 /*
