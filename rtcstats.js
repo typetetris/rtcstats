@@ -212,8 +212,6 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
           }
           return {
             track: track,
-            videoCapabilities: sender.getCapabilities('video'),
-            audioCapabilities: sender.getCapabilities('audio'),
             parameters: sender.getParameters()
           };
         });
