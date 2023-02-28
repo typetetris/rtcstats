@@ -203,6 +203,7 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
           prev = base;
         });
       };
+
       var getSendersInfos = function() {
         var sendersInfos = pc.getSenders().map(function (sender) {
           var track;
@@ -223,9 +224,10 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
       //    queried in that or one setInterval per PC?
       //    we have to collect results anyway so...
       if (!isEdge && getStatsInterval) {
-        var interval = window.setInterval(function() {
+        var getStatsIntervalObject = window.setInterval(function() {
           if (pc.signalingState === 'closed') {
-            window.clearInterval(interval);
+            window.clearInterval(getStatsIntervalObject);
+            trace('clearedIntervalGetStats', id, null);
             return;
           }
           getStats();
@@ -234,9 +236,10 @@ module.exports = function(trace, getStatsInterval, prefixesToWrap) {
 
       // TODO: make interval configurable
       if (!isEdge) {
-        var interval = window.setInterval(function () {
+        var sendersInfosIntervalObject = window.setInterval(function () {
           if (pc.signalingState === 'closed') {
-            window.clearInterval(interval);
+            window.clearInterval(sendersInfosIntervalObject);
+            trace('clearedIntervalSendersInfos', id, null);
             return;
           }
           getSendersInfos();
